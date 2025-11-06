@@ -1,0 +1,489 @@
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Marvel Movie Checklist</title>
+<style>body {
+    font-family: sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+}
+
+.controls {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.controls label {
+    margin-right: 10px;
+    font-weight: bold;
+}
+
+#sort-order {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.progress-container {
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.progress-bar-background {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+    height: 20px;
+    margin-bottom: 5px;
+}
+
+.progress-bar {
+    width: 0%; /* Initial width */
+    height: 100%;
+    background-color: #3498db;
+    transition: width 0.3s ease-in-out;
+    border-radius: 5px 0 0 5px; /* Keep left radius */
+}
+
+#progress-text {
+    font-weight: bold;
+    color: #555;
+}
+
+.movie-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+@media (min-width: 600px) {
+    .movie-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 20px;
+    }
+}
+
+.movie-card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.movie-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.movie-card .poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    background-color: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    font-size: 12px;
+    transition: background-color 0.3s ease;
+    overflow: hidden;
+}
+.info-popup {
+    position: fixed;
+    top: 120px; /* Distance from top */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 500px;
+    z-index: 999;
+    display: flex;
+    justify-content: center;
+}
+
+
+.info-popup-content {
+    background-color: #fff;
+    padding: 20px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    max-width: 400px;
+    text-align: center;
+    font-size: 0.95em;
+    color: #333;
+}
+
+.info-popup-content button {
+    margin-top: 15px;
+    padding: 10px 16px;
+    font-weight: bold;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.info-popup-content button:hover {
+    background-color: #2980b9;
+}
+
+.hidden {
+    display: none;
+}
+
+.movie-card .poster img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.movie-card .poster svg {
+    width: 50%;
+    height: 50%;
+    opacity: 0.5;
+}
+
+.movie-card .info {
+    padding: 10px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.movie-card .title {
+    font-weight: bold;
+    font-size: 0.95em;
+    margin: 0 0 5px 0;
+    min-height: 2.4em;
+    line-height: 1.2em;
+}
+
+.movie-card .year {
+    font-size: 0.85em;
+    color: #666;
+    transition: color 0.3s ease;
+}
+
+.movie-card.completed {
+    background-color: #3498db;
+    color: white;
+    border-color: #2980b9;
+}
+
+.movie-card.completed .poster,
+.movie-card.completed .info {
+    background-color: #3498db;
+}
+.subtitle {
+    margin-top: 5px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.subtitle a {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: auto;
+}
+
+.movie-card.completed .year {
+    color: #ecf0f1;
+}
+
+.movie-card .checkmark {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.movie-card.completed .checkmark {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.movie-card .checkmark svg {
+    width: 20px;
+    height: 20px;
+    fill: #3498db;
+}</style>
+</head>
+<body>
+<div class="container">
+<div style="text-align: center; margin-bottom: 20px;">
+    <img src="https://www.bobthecow.org/web/image/2609-fd6e56a7/MarvelChecklist.svg" alt="Marvel Checklist Logo" style="max-width: 100%; height: auto;">
+<p class="subtitle">
+    <a href="https://nathangreway.com" target="_blank" rel="noopener">by Nathan Greway</a>
+  </p>
+</div>
+<div class="controls">
+<label for="sort-order">Order By:</label>
+<select id="sort-order">
+<option value="release">Release Date</option>
+<option value="chronological">Chronological</option>
+<option value="infinity-saga">Infinity Saga</option>
+<!-- Add more phases/sagas if needed -->
+</select>
+</div>
+<div class="progress-container">
+<div class="progress-bar-background">
+<div class="progress-bar" id="progress-bar"></div>
+</div>
+<span id="progress-text">0% Complete</span>
+</div>
+<div class="movie-grid" id="movie-grid">
+<!-- Movie cards will be generated here by JavaScript -->
+</div>
+<div id="info-popup" class="info-popup hidden">
+  <div class="info-popup-content">
+    <p>Marvel Checklist saves your list in the browser. Clearing the cache or cookies of this site will remove your list.</p>
+    <button id="info-ok-btn">I understand</button>
+  </div>
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!localStorage.getItem('popupAcknowledged')) {
+        document.getElementById('info-popup').classList.remove('hidden');
+    }
+
+    document.getElementById('info-ok-btn').addEventListener('click', function () {
+        localStorage.setItem('popupAcknowledged', 'true');
+        document.getElementById('info-popup').classList.add('hidden');
+    });
+});
+</script>
+
+<script type="module">// --- Data ---
+// Poster base URL: https://image.tmdb.org/t/p/w500
+// Placeholder poster SVG
+const placeholderPosterSvg = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 225">
+  <rect width="150" height="225" fill="#ccc"/>
+  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14px" fill="#888">No Poster</text>
+</svg>`;
+
+// Updated movie list with posters and recent/upcoming films
+const marvelMovies = [
+    // Phase 1
+    { id: 'iron-man', title: 'Iron Man', year: 2008, releaseOrder: 1, chronologicalOrder: 3, saga: 'Infinity Saga - Phase 1', posterUrl: 'https://image.tmdb.org/t/p/w500/wceJWXt0neJ0biXKOajMoAz2vaY.jpg' },
+    { id: 'incredible-hulk', title: 'The Incredible Hulk', year: 2008, releaseOrder: 2, chronologicalOrder: 4, saga: 'Infinity Saga - Phase 1', posterUrl: 'https://image.tmdb.org/t/p/w500/gKzYx79y0AQTL4UAk1cBQJ3nvrm.jpg' },
+    { id: 'iron-man-2', title: 'Iron Man 2', year: 2010, releaseOrder: 3, chronologicalOrder: 5, saga: 'Infinity Saga - Phase 1', posterUrl: 'https://image.tmdb.org/t/p/w500/6WBeq4fCfn7AN0o21W9qNcRF2l9.jpg' },
+    { id: 'thor', title: 'Thor', year: 2011, releaseOrder: 4, chronologicalOrder: 6, saga: 'Infinity Saga - Phase 1', posterUrl: 'https://image.tmdb.org/t/p/w500/prSfAi1xGrhLQNxVSUFh61xQ4Qy.jpg' },
+    { id: 'captain-america-first-avenger', title: 'Captain America: The First Avenger', year: 2011, releaseOrder: 5, chronologicalOrder: 1, saga: 'Infinity Saga - Phase 1', posterUrl: 'https://image.tmdb.org/t/p/w500/vSNxAJTlD0r02V9sPYpOjqDZXUK.jpg' },
+    { id: 'avengers', title: 'The Avengers', year: 2012, releaseOrder: 6, chronologicalOrder: 7, saga: 'Infinity Saga - Phase 1', posterUrl: 'https://image.tmdb.org/t/p/w500/RYMX2wcKCBAr24UyPD7xwmjaTn.jpg' },
+    // Phase 2
+    { id: 'iron-man-3', title: 'Iron Man 3', year: 2013, releaseOrder: 7, chronologicalOrder: 8, saga: 'Infinity Saga - Phase 2', posterUrl: 'https://image.tmdb.org/t/p/w500/1Ilv6ryHUv6rt9zIsbSEJUmmbEi.jpg' },
+    { id: 'thor-dark-world', title: 'Thor: The Dark World', year: 2013, releaseOrder: 8, chronologicalOrder: 9, saga: 'Infinity Saga - Phase 2', posterUrl: 'https://image.tmdb.org/t/p/w500/wD6g4EcmR6R3VNbuBmNOVq2qWrM.jpg' },
+    { id: 'captain-america-winter-soldier', title: 'Captain America: The Winter Soldier', year: 2014, releaseOrder: 9, chronologicalOrder: 10, saga: 'Infinity Saga - Phase 2', posterUrl: 'https://image.tmdb.org/t/p/w500/tVFRpFw3xTedgPGqxW0AOI8Qhh0.jpg' },
+    { id: 'guardians-of-the-galaxy', title: 'Guardians of the Galaxy', year: 2014, releaseOrder: 10, chronologicalOrder: 11, saga: 'Infinity Saga - Phase 2', posterUrl: 'https://image.tmdb.org/t/p/w500/r7vmZjiyZw9rpJMQJdXpjgiCOk9.jpg' }, // Corrected path if needed
+    { id: 'avengers-age-of-ultron', title: 'Avengers: Age of Ultron', year: 2015, releaseOrder: 11, chronologicalOrder: 12, saga: 'Infinity Saga - Phase 2', posterUrl: 'https://image.tmdb.org/t/p/w500/4ssDuvEDkSArWEdyBl2X5EHvYKU.jpg' },
+    { id: 'ant-man', title: 'Ant-Man', year: 2015, releaseOrder: 12, chronologicalOrder: 13, saga: 'Infinity Saga - Phase 2', posterUrl: 'https://image.tmdb.org/t/p/w500/rS97hUJ1otKTTripGwQ0ujbuIri.jpg' },
+    // Phase 3
+    { id: 'captain-america-civil-war', title: 'Captain America: Civil War', year: 2016, releaseOrder: 13, chronologicalOrder: 14, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/rAGiXaUfPzY7CDEyNKUofk3Kw2e.jpg' },
+    { id: 'black-widow', title: 'Black Widow', year: 2021, releaseOrder: 24, chronologicalOrder: 15, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/kwB7d51AIcyzPOBOHLCEZJkmPhQ.jpg' }, // Chronologically fits here
+    { id: 'black-panther', title: 'Black Panther', year: 2018, releaseOrder: 18, chronologicalOrder: 16, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg' },
+    { id: 'spider-man-homecoming', title: 'Spider-Man: Homecoming', year: 2017, releaseOrder: 16, chronologicalOrder: 17, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/c24sv2weTHPsmDa7jEMN0m2P3RT.jpg' },
+    { id: 'doctor-strange', title: 'Doctor Strange', year: 2016, releaseOrder: 14, chronologicalOrder: 18, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/uGBVj3bEbCoZbDjjl9wTxcygko1.jpg' },
+    { id: 'thor-ragnarok', title: 'Thor: Ragnarok', year: 2017, releaseOrder: 17, chronologicalOrder: 19, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/rzRwTcFvttcN1ZpX2xv4j3tSdJu.jpg' },
+    { id: 'ant-man-wasp', title: 'Ant-Man and the Wasp', year: 2018, releaseOrder: 20, chronologicalOrder: 20, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/cFQEO687n1K6umXbInzocxcnAQz.jpg' },
+    { id: 'avengers-infinity-war', title: 'Avengers: Infinity War', year: 2018, releaseOrder: 19, chronologicalOrder: 21, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg' },
+    { id: 'captain-marvel', title: 'Captain Marvel', year: 2019, releaseOrder: 21, chronologicalOrder: 2, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/AtsgWhDnHTq68L0lLsUrCnM7TjG.jpg' }, // Chronologically early
+    { id: 'avengers-endgame', title: 'Avengers: Endgame', year: 2019, releaseOrder: 22, chronologicalOrder: 22, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg' },
+    { id: 'spider-man-far-from-home', title: 'Spider-Man: Far From Home', year: 2019, releaseOrder: 23, chronologicalOrder: 23, saga: 'Infinity Saga - Phase 3', posterUrl: 'https://image.tmdb.org/t/p/w500/4q2NNj4S5dG2RLF9CpXsej7yXl.jpg' },
+    // Phase 4
+    // Skipping TV shows for now (WandaVision, Falcon/WS, Loki S1, Hawkeye etc.) but keeping chronological order based on them
+    { id: 'shang-chi', title: 'Shang-Chi and the Legend of the Ten Rings', year: 2021, releaseOrder: 25, chronologicalOrder: 24, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/1BIoJGKbXjdFDAqUEiA2VHqkK1Z.jpg' },
+    { id: 'eternals', title: 'Eternals', year: 2021, releaseOrder: 26, chronologicalOrder: 25, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/lFByFSLV5WDJEv3KabbdAF959F2.jpg' }, // Approx Chrono
+    { id: 'spider-man-no-way-home', title: 'Spider-Man: No Way Home', year: 2021, releaseOrder: 27, chronologicalOrder: 26, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/uJYYizSuA9Y3DCs0qS4qWvHfZg4.jpg' },
+    { id: 'doctor-strange-mom', title: 'Doctor Strange in the Multiverse of Madness', year: 2022, releaseOrder: 28, chronologicalOrder: 27, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg' },
+    { id: 'thor-love-thunder', title: 'Thor: Love and Thunder', year: 2022, releaseOrder: 29, chronologicalOrder: 28, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/pIkRyD18kl4FhoCNQuWxWu5cBLM.jpg' },
+    { id: 'black-panther-wakanda-forever', title: 'Black Panther: Wakanda Forever', year: 2022, releaseOrder: 30, chronologicalOrder: 29, saga: 'Multiverse Saga - Phase 4', posterUrl: 'https://image.tmdb.org/t/p/w500/sv1xJUazXeYqALzczSZ3O6nkH75.jpg' },
+    // Phase 5
+    { id: 'ant-man-quantumania', title: 'Ant-Man and the Wasp: Quantumania', year: 2023, releaseOrder: 31, chronologicalOrder: 30, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/w500/ngl2FKBlU4fhbdsrtdom9LVLBXw.jpg' },
+    { id: 'guardians-of-the-galaxy-3', title: 'Guardians of the Galaxy Vol. 3', year: 2023, releaseOrder: 32, chronologicalOrder: 31, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/w500/h5tHu8f8GYpiX9S6TnZgkVKthOQ.jpg' },
+    { id: 'the-marvels', title: 'The Marvels', year: 2023, releaseOrder: 33, chronologicalOrder: 32, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/w500/9GBhzXMFjgcZ3FdR9w3bUMMTps5.jpg' },
+    // Upcoming / Phase 5/6
+    { id: 'deadpool-wolverine', title: 'Deadpool & Wolverine', year: 2024, releaseOrder: 34, chronologicalOrder: 33, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg' }, // Chrono TBD, placing after The Marvels for now
+    { id: 'captain-america-brave-new-world', title: 'Captain America: Brave New World', year: 2025, releaseOrder: 35, chronologicalOrder: 34, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/w500/pzIddUEMWhWzfvLI3TwxUG2wGoi.jpg' }, // Found a poster
+    { id: 'thunderbolts', title: 'Thunderbolts*', year: 2025, releaseOrder: 36, chronologicalOrder: 35, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/w500/hBH50Mkcrc4m8x73CovLmY7vBx1.jpg' },
+    { id: 'fantasticfour', title: 'The Fantastic 4: First Steps', year: 2025, releaseOrder: 37, chronologicalOrder: 36, saga: 'Multiverse Saga - Phase 5', posterUrl: 'https://image.tmdb.org/t/p/original/nf5qaSEvyYSNeFH0YhSs5EsBLX9.jpg' },
+];
+
+// --- State ---
+let completedMovies = new Set(); // Store IDs of completed movies
+let currentSortOrder = 'release'; // Default sort order
+
+// --- DOM Elements ---
+const movieGrid = document.getElementById('movie-grid');
+const sortOrderSelect = document.getElementById('sort-order');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
+
+// --- Local Storage ---
+const COMPLETED_KEY = 'marvelChecklistCompleted_v1';
+const SORT_ORDER_KEY = 'marvelChecklistSortOrder_v1';
+
+function loadState() {
+    const storedCompleted = localStorage.getItem(COMPLETED_KEY);
+    if (storedCompleted) {
+        completedMovies = new Set(JSON.parse(storedCompleted));
+    }
+    const storedSortOrder = localStorage.getItem(SORT_ORDER_KEY);
+    if (storedSortOrder && sortOrderSelect.querySelector(`option[value="${storedSortOrder}"]`)) {
+        currentSortOrder = storedSortOrder;
+        sortOrderSelect.value = currentSortOrder;
+    }
+}
+
+function saveState() {
+    localStorage.setItem(COMPLETED_KEY, JSON.stringify([...completedMovies]));
+    localStorage.setItem(SORT_ORDER_KEY, currentSortOrder);
+}
+
+// --- Rendering ---
+function renderMovies() {
+    // Sort movies
+    const sortedMovies = [...marvelMovies].sort((a, b) => {
+        switch (currentSortOrder) {
+            case 'chronological':
+                return a.chronologicalOrder - b.chronologicalOrder;
+            case 'infinity-saga': // Renamed internally to handle all sagas/phases
+                 const sagaOrderMap = {
+                    'Infinity Saga - Phase 1': 1,
+                    'Infinity Saga - Phase 2': 2,
+                    'Infinity Saga - Phase 3': 3,
+                    'Multiverse Saga - Phase 4': 4,
+                    'Multiverse Saga - Phase 5': 5,
+                    'Multiverse Saga - Phase 6': 6, // Future-proofing
+                };
+                // Extract phase number for sorting
+                const getPhaseOrder = (sagaString) => {
+                    if (!sagaString) return 99;
+                    const match = sagaString.match(/Phase (\d+)/);
+                    const phaseNum = match ? parseInt(match[1], 10) : 99;
+                    // Add large offset for Multiverse saga to ensure it comes after Infinity
+                    const sagaOffset = sagaString.includes('Multiverse') ? 100 : 0;
+                    return sagaOffset + phaseNum;
+                };
+
+                const orderA = getPhaseOrder(a.saga);
+                const orderB = getPhaseOrder(b.saga);
+
+                if (orderA !== orderB) return orderA - orderB;
+                return a.releaseOrder - b.releaseOrder; // Fallback sort within phase by release
+            case 'release':
+            default:
+                return a.releaseOrder - b.releaseOrder;
+        }
+    });
+
+    // Clear existing grid
+    movieGrid.innerHTML = '';
+
+    // Create and append movie cards
+    sortedMovies.forEach(movie => {
+        const card = document.createElement('div');
+        card.classList.add('movie-card');
+        card.dataset.movieId = movie.id;
+        if (completedMovies.has(movie.id)) {
+            card.classList.add('completed');
+        }
+
+        // Use poster URL if available, otherwise use placeholder
+        const posterContent = movie.posterUrl
+            ? `<img src="${movie.posterUrl}" alt="${movie.title} Poster" loading="lazy">`
+            : placeholderPosterSvg;
+
+        card.innerHTML = `
+            <div class="poster">${posterContent}</div>
+            <div class="info">
+                <div class="title">${movie.title}</div>
+                <div class="year">${movie.year}</div>
+            </div>
+            <div class="checkmark">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+        `;
+
+        // Add event listener
+        card.addEventListener('click', () => toggleMovieCompletion(movie.id));
+
+        movieGrid.appendChild(card);
+    });
+
+    updateProgress();
+}
+
+function updateProgress() {
+    const totalMovies = marvelMovies.length;
+    const completedCount = completedMovies.size;
+    const percentage = totalMovies > 0 ? Math.round((completedCount / totalMovies) * 100) : 0;
+
+    progressBar.style.width = `${percentage}%`;
+    progressText.textContent = `${percentage}% Complete (${completedCount}/${totalMovies})`;
+}
+
+// --- Event Handlers ---
+function toggleMovieCompletion(movieId) {
+    const card = movieGrid.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
+    if (completedMovies.has(movieId)) {
+        completedMovies.delete(movieId);
+        card?.classList.remove('completed');
+    } else {
+        completedMovies.add(movieId);
+        card?.classList.add('completed');
+    }
+    updateProgress();
+    saveState(); // Save changes to local storage
+}
+
+function handleSortChange(event) {
+    currentSortOrder = event.target.value;
+    renderMovies();
+    saveState(); // Save new sort order
+}
+
+// --- Initialization ---
+function init() {
+    loadState(); // Load saved state first
+    sortOrderSelect.addEventListener('change', handleSortChange);
+    renderMovies(); // Initial render based on loaded state
+}
+
+init();</script>
+</body>
+</html>
