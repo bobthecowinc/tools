@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MultiCrop - Free Online Multiple Region Image Cropper</title>
+    <meta name="description" content="Crop multiple distinct regions from a single image online for free. Drag and drop photos, crop multiple sections, preview live thumbnails, and export all crops as a ZIP. 100% private in-browser tool.">
+    <meta name="keywords" content="multicrop, crop multiple regions, batch crop image, extract photo regions, online image cropper, multi image crop tool, slice picture, free photo cropper">
+    <meta name="author" content="Nathan Greway">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Open Graph / Facebook / LinkedIn -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nathangreway.com/multicrop">
+    <meta property="og:title" content="MultiCrop - Free Online Multiple Region Image Cropper">
+    <meta property="og:description" content="The only online tool that allows you to make multiple individual crops from a single image. Crop, preview, and download all as a ZIP file. Fast and 100% private.">
+    <meta property="og:image" content="logo.svg">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MultiCrop - Multiple Region Photo Cropper">
+    <meta name="twitter:description" content="Select and export multiple custom cropped sections from any single photo. Fully browser-based with high-DPI canvas support.">
+    <meta name="twitter:image" content="logo.svg">
+
+    <!-- JSON-LD Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "MultiCrop",
+      "url": "https://nathangreway.com/multicrop",
+      "description": "A web-based tool for selecting and exporting multiple custom cropped sections from a single photo.",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Nathan Greway",
+        "url": "https://nathangreway.com"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [{
+        "@type": "Question",
+        "name": "Can I make multiple crops from one photo?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! MultiCrop allows you to select, color-code, preview, and export unlimited crop selections from a single image."
+        }
+      }, {
+        "@type": "Question",
+        "name": "Are my images uploaded to a server?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. All processing is 100% client-side and private. Your images never leave your browser."
+        }
+      }]
+    }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-main: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --dropzone-bg: #fafafa;
+            --crop-item-bg: #f8fafc;
+            --crop-item-hover: #f1f5f9;
+            --workspace-bg: #e2e8f0;
+            --empty-state-text: #64748b;
+            --empty-state-icon: #94a3b8;
+        }
+
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --surface: #1e293b;
+            --border: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --dropzone-bg: #0f172a;
+            --crop-item-bg: #0f172a;
+            --crop-item-hover: #1e293b;
+            --workspace-bg: #0f172a;
+            --empty-state-text: #94a3b8;
+            --empty-state-icon: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        body.drag-active::after {
+            content: "Drop Image Anywhere to Upload";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(79, 70, 229, 0.9);
+            color: white;
+            font-size: 1.4rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+
+        header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            z-index: 20;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-container img {
+            height: 30px;
+            transition: filter 0.2s ease;
+        }
+
+        body.dark-mode .logo-container img {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        .version-tag {
+            background: #ede9fe;
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+
+        body.dark-mode .version-tag {
+            background: #312e81;
+            color: #c7d2fe;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Mobile Tab Switcher */
+        .mobile-tabs {
+            display: none;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            grid-template-columns: 1fr 1fr;
+            flex-shrink: 0;
+            z-index: 15;
+        }
+
+        .tab-btn {
+            padding: 10px;
+            border: none;
+            background: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--bg-main);
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Sidebar Styles */
+        sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 18px;
+            gap: 14px;
+            overflow: hidden;
+            height: 100%;
+            z-index: 10;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 14px 10px;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: var(--dropzone-bg);
+        }
+
+        .drop-zone:hover {
+            border-color: var(--primary);
+            background: #eef2ff;
+        }
+
+        body.dark-mode .drop-zone:hover {
+            background: #1e1b4b;
+        }
+
+        .drop-zone i {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .drop-zone p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .image-select-wrapper {
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 0.85rem;
+            color: var(--text-main);
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .crop-list-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            position: relative;
+        }
+
+        .crop-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow-y: auto;
+            flex: 1;
+            padding-right: 4px;
+        }
+
+        .crop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--crop-item-bg);
+            border: 1px solid var(--border);
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .crop-item:hover {
+            background: var(--crop-item-hover);
+        }
+
+        .crop-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .color-badge {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+
+        .crop-item-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .icon-btn.download:hover { color: var(--success); background: #dcfce7; }
+        body.dark-mode .icon-btn.download:hover { background: #064e3b; }
+        .icon-btn.delete:hover { color: var(--danger); background: #fee2e2; }
+        body.dark-mode .icon-btn.delete:hover { background: #7f1d1d; }
+
+        /* Floating Hover Tooltip Preview */
+        .crop-preview-tooltip {
+            position: fixed;
+            display: none;
+            pointer-events: none;
+            z-index: 1000;
+            background: #000;
+            border: 2px solid var(--surface);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border-radius: 6px;
+            overflow: hidden;
+            max-width: 160px;
+            max-height: 160px;
+        }
+
+        .crop-preview-tooltip canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .controls-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: auto;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 11px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.2s;
+            min-height: 44px;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger-soft { background: #fee2e2; color: var(--danger); }
+        body.dark-mode .btn-danger-soft { background: #451a1a; color: #fca5a5; }
+        .btn-danger-soft:hover { background: #fecaca; }
+        body.dark-mode .btn-danger-soft:hover { background: #7f1d1d; }
+
+        /* Workspace */
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: auto;
+            background: var(--workspace-bg);
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            transition: background 0.2s ease;
+        }
+
+        .zoom-toolbar {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            color: white;
+            z-index: 10;
+            font-size: 0.8rem;
+        }
+
+        .zoom-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15);
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.dark-mode .canvas-container {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--empty-state-text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            pointer-events: auto;
+            cursor: pointer;
+            padding: 30px;
+        }
+
+        .empty-state i {
+            font-size: 42px;
+            color: var(--empty-state-icon);
+        }
+
+        footer {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        /* Invisible Hyperlink Styling */
+        .invisible-link {
+            color: inherit;
+            text-decoration: none;
+            cursor: text;
+        }
+
+        /* Mobile Breakpoint Adaptations */
+        @media (max-width: 768px) {
+            .header-subtitle {
+                display: none;
+            }
+
+            .mobile-tabs {
+                display: grid;
+            }
+
+            .app-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr;
+            }
+
+            sidebar {
+                border-right: none;
+                display: none;
+            }
+
+            sidebar.active-mobile-view {
+                display: flex;
+            }
+
+            .workspace {
+                display: none;
+            }
+
+            .workspace.active-mobile-view {
+                display: flex;
+            }
+
+            .mobile-only-text {
+                display: inline !important;
+            }
+
+            .desktop-only-text {
+                display: none !important;
+            }
+        }
+
+        .mobile-only-text {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-container">
+        <img src="logo.svg" alt="MultiCrop Logo" id="headerLogo">
+        <span class="version-tag">v3.0</span>
+    </div>
+    <div class="header-actions">
+        <h1 class="header-subtitle" style="font-weight: normal; font-size: 0.85rem;">Make multiple distinct crops from a single image</h1>
+        <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Dark Mode" aria-label="Toggle Dark Mode">
+            <i class="fa-solid fa-moon" id="themeIcon"></i>
+        </button>
+    </div>
+</header>
+
+<!-- Mobile View Switcher -->
+<div class="mobile-tabs" id="mobileTabs">
+    <button class="tab-btn active" id="tabWorkspace">Image Workspace</button>
+    <button class="tab-btn" id="tabSidebar">Crops Manager (<span id="tabCropCount">0</span>)</button>
+</div>
+
+<div class="app-layout">
+    <!-- Sidebar Controls -->
+    <sidebar id="sidebar">
+        <div>
+            <div class="section-title">1. Upload Image</div>
+            <div class="drop-zone" id="dropZone">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <p>Tap or drag image here</p>
+            </div>
+            <input type="file" id="imageUpload" accept="image/png, image/jpeg" multiple style="display:none;">
+        </div>
+
+        <div id="selectorContainer" style="display:none;">
+            <div class="section-title">Active Image</div>
+            <div class="image-select-wrapper">
+                <select id="imageSelector" aria-label="Select active image"></select>
+            </div>
+        </div>
+
+        <div class="crop-list-container">
+            <div class="section-title">Crops Manager (<span id="cropCount">0</span>)</div>
+            <ul id="cropList" class="crop-list">
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 16px;">No crops drawn yet. Draw on image workspace.</div>
+            </ul>
+        </div>
+
+        <div class="controls-group">
+            <button class="btn btn-danger-soft" id="clearLastCrop">
+                <i class="fa-solid fa-rotate-left"></i> Delete Last Crop
+            </button>
+            <button class="btn btn-primary" id="exportCrops">
+                <i class="fa-solid fa-file-zipper"></i> Export All as ZIP
+            </button>
+        </div>
+    </sidebar>
+
+    <!-- Main Workspace -->
+    <main class="workspace active-mobile-view" id="workspace">
+        <div class="zoom-toolbar" id="zoomToolbar" style="display:none;">
+            <button class="zoom-btn" id="zoomOut" title="Zoom Out" aria-label="Zoom Out"><i class="fa-solid fa-minus"></i></button>
+            <span id="zoomLevel">100%</span>
+            <button class="zoom-btn" id="zoomIn" title="Zoom In" aria-label="Zoom In"><i class="fa-solid fa-plus"></i></button>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+            <i class="fa-regular fa-image"></i>
+            <p class="desktop-only-text">Upload or drop an image to start cropping</p>
+            <p class="mobile-only-text">Tap anywhere to upload or drop an image</p>
+        </div>
+        <div class="canvas-container" id="canvasContainer" style="display: none;">
+            <canvas id="imageCanvas"></canvas>
+        </div>
+    </main>
+</div>
+
+<div class="crop-preview-tooltip" id="cropTooltip">
+    <canvas id="tooltipCanvas"></canvas>
+</div>
+
+<footer>
+    &copy; 2026 <a href="https://nathangreway.com" class="invisible-link">Nathan Greway</a>. All rights reserved.
+</footer>
+
+<script>
+const CROP_COLORS = [
+    '#ef4444', '#f97316', '#f59e0b', '#10b981', 
+    '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', 
+    '#ec4899', '#f43f5e'
+];
+
+const imageUpload = document.getElementById('imageUpload');
+const dropZone = document.getElementById('dropZone');
+const imageSelector = document.getElementById('imageSelector');
+const selectorContainer = document.getElementById('selectorContainer');
+const canvas = document.getElementById('imageCanvas');
+const ctx = canvas.getContext('2d');
+const cropList = document.getElementById('cropList');
+const cropCount = document.getElementById('cropCount');
+const tabCropCount = document.getElementById('tabCropCount');
+const emptyState = document.getElementById('emptyState');
+const canvasContainer = document.getElementById('canvasContainer');
+const zoomToolbar = document.getElementById('zoomToolbar');
+const zoomLevelEl = document.getElementById('zoomLevel');
+
+const themeToggleBtn = document.getElementById('themeToggleBtn');
+const themeIcon = document.getElementById('themeIcon');
+
+const sidebar = document.getElementById('sidebar');
+const workspace = document.getElementById('workspace');
+const tabWorkspace = document.getElementById('tabWorkspace');
+const tabSidebar = document.getElementById('tabSidebar');
+
+const cropTooltip = document.getElementById('cropTooltip');
+const tooltipCanvas = document.getElementById('tooltipCanvas');
+const tooltipCtx = tooltipCanvas.getContext('2d');
+
+let images = {};
+let cropData = {}; 
+let currentImage = null;
+let zoomFactor = 1; 
+
+let startX = 0, startY = 0, currentX = 0, currentY = 0, isDrawing = false;
+let baseScale = 1; 
+
+// Dark Mode Toggle Logic
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.body.classList.add('dark-mode');
+        themeIcon.className = 'fa-solid fa-sun';
+    } else {
+        document.body.classList.remove('dark-mode');
+        themeIcon.className = 'fa-solid fa-moon';
+    }
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+});
+
+initTheme();
+
+// Mobile Tab Toggle
+tabWorkspace.addEventListener('click', () => {
+    tabWorkspace.classList.add('active');
+    tabSidebar.classList.remove('active');
+    workspace.classList.add('active-mobile-view');
+    sidebar.classList.remove('active-mobile-view');
+});
+
+tabSidebar.addEventListener('click', () => {
+    tabSidebar.classList.add('active');
+    tabWorkspace.classList.remove('active');
+    sidebar.classList.add('active-mobile-view');
+    workspace.classList.remove('active-mobile-view');
+});
+
+// Empty workspace click trigger for upload
+emptyState.addEventListener('click', () => {
+    imageUpload.click();
+});
+
+// Drag and drop handlers
+['dragenter', 'dragover'].forEach(eventName => {
+    window.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        document.body.classList.add('drag-active');
+    }, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    window.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (eventName === 'drop' || e.clientX === 0 || e.clientY === 0) {
+            document.body.classList.remove('drag-active');
+        }
+    }, false);
+});
+
+window.addEventListener('drop', e => {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFiles(e.dataTransfer.files);
+    }
+});
+
+dropZone.addEventListener('click', () => imageUpload.click());
+imageUpload.addEventListener('change', e => handleFiles(e.target.files));
+
+function handleFiles(files) {
+    Array.from(files).forEach(file => {
+        if (!file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                images[file.name] = img;
+                if (!cropData[file.name]) cropData[file.name] = [];
+                updateImageSelector();
+                if (!currentImage) loadImage(file.name);
+            };
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function updateImageSelector() {
+    const keys = Object.keys(images);
+    if (keys.length > 0) {
+        selectorContainer.style.display = 'block';
+        imageSelector.innerHTML = '';
+        keys.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            imageSelector.appendChild(option);
+        });
+        if (currentImage) imageSelector.value = currentImage;
+    }
+}
+
+function loadImage(name) {
+    currentImage = name;
+    zoomFactor = 1.0; 
+    emptyState.style.display = 'none';
+    canvasContainer.style.display = 'flex';
+    zoomToolbar.style.display = 'flex';
+
+    const img = images[name];
+    const maxW = workspace.clientWidth - 40;
+    const maxH = workspace.clientHeight - 40;
+    
+    baseScale = Math.min(maxW / img.width, maxH / img.height, 1);
+    resizeAndRender();
+}
+
+function resizeAndRender() {
+    if (!currentImage) return;
+    const img = images[currentImage];
+    const dpr = window.devicePixelRatio || 1;
+    const effectiveScale = baseScale * zoomFactor;
+
+    canvas.width = img.width * effectiveScale * dpr;
+    canvas.height = img.height * effectiveScale * dpr;
+
+    canvas.style.width = `${img.width * effectiveScale}px`;
+    canvas.style.height = `${img.height * effectiveScale}px`;
+
+    ctx.scale(dpr, dpr);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    zoomLevelEl.textContent = `${Math.round(zoomFactor * 100)}%`;
+    renderCrops();
+}
+
+document.getElementById('zoomIn').addEventListener('click', () => {
+    if (zoomFactor < 4.0) { zoomFactor += 0.25; resizeAndRender(); }
+});
+document.getElementById('zoomOut').addEventListener('click', () => {
+    if (zoomFactor > 0.5) { zoomFactor -= 0.25; resizeAndRender(); }
+});
+
+function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: Math.max(0, Math.min(clientX - rect.left, canvas.width / (window.devicePixelRatio || 1))),
+        y: Math.max(0, Math.min(clientY - rect.top, canvas.height / (window.devicePixelRatio || 1)))
+    };
+}
+
+function handleStart(e) {
+    if (!currentImage || !canvasContainer.contains(e.target)) return;
+    const pos = getCanvasPos(e);
+    isDrawing = true;
+    startX = pos.x;
+    startY = pos.y;
+    currentX = startX;
+    currentY = startY;
+}
+
+function handleMove(e) {
+    if (!isDrawing) return;
+    const pos = getCanvasPos(e);
+    currentX = pos.x;
+    currentY = pos.y;
+    renderCrops();
+}
+
+function handleEnd() {
+    if (!isDrawing) return;
+    isDrawing = false;
+
+    const x = Math.min(startX, currentX);
+    const y = Math.min(startY, currentY);
+    const width = Math.abs(currentX - startX);
+    const height = Math.abs(currentY - startY);
+
+    const effectiveScale = baseScale * zoomFactor;
+
+    if (width > 5 && height > 5) {
+        if (!cropData[currentImage]) cropData[currentImage] = [];
+        const colorIndex = cropData[currentImage].length > 0 
+            ? (Math.max(...cropData[currentImage].map(c => c.colorIndex)) + 1) 
+            : 0;
+
+        cropData[currentImage].push({
+            x: x / effectiveScale,
+            y: y / effectiveScale,
+            width: width / effectiveScale,
+            height: height / effectiveScale,
+            colorIndex: colorIndex
+        });
+    }
+    renderCrops();
+}
+
+window.addEventListener('mousedown', handleStart);
+window.addEventListener('mousemove', handleMove);
+window.addEventListener('mouseup', handleEnd);
+
+window.addEventListener('touchstart', handleStart, { passive: true });
+window.addEventListener('touchmove', handleMove, { passive: true });
+window.addEventListener('touchend', handleEnd);
+
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function renderCrops() {
+    if (!currentImage) return;
+    const img = images[currentImage];
+    const effectiveScale = baseScale * zoomFactor;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, img.width * effectiveScale, img.height * effectiveScale);
+
+    const regions = cropData[currentImage] || [];
+
+    regions.forEach((crop) => {
+        const color = CROP_COLORS[crop.colorIndex % CROP_COLORS.length];
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.fillStyle = hexToRgba(color, 0.2);
+        ctx.fillRect(crop.x * effectiveScale, crop.y * effectiveScale, crop.width * effectiveScale, crop.height * effectiveScale);
+        ctx.strokeRect(crop.x * effectiveScale, crop.y * effectiveScale, crop.width * effectiveScale, crop.height * effectiveScale);
+    });
+
+    if (isDrawing) {
+        const x = Math.min(startX, currentX);
+        const y = Math.min(startY, currentY);
+        const w = Math.abs(currentX - startX);
+        const h = Math.abs(currentY - startY);
+
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
+        ctx.fillRect(x, y, w, h);
+        ctx.strokeRect(x, y, w, h);
+
+        ctx.fillStyle = '#22c55e';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.fillText(`${Math.round(w / effectiveScale)} × ${Math.round(h / effectiveScale)}px`, x + 4, y > 18 ? y - 4 : y + 16);
+    }
+
+    updateCropList();
+}
+
+function updateCropList() {
+    const regions = cropData[currentImage] || [];
+    cropList.innerHTML = '';
+    cropCount.textContent = regions.length;
+    tabCropCount.textContent = regions.length;
+
+    if (regions.length === 0) {
+        cropList.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-muted); text-align: center; padding: 16px;">No crops drawn yet. Draw on image workspace.</div>`;
+        return;
+    }
+
+    regions.forEach((crop, index) => {
+        const color = CROP_COLORS[crop.colorIndex % CROP_COLORS.length];
+        const li = document.createElement('li');
+        li.className = 'crop-item';
+        li.innerHTML = `
+            <div class="crop-info">
+                <div class="color-badge" style="background-color: ${color}"></div>
+                <span><strong>#${index + 1}</strong> (${Math.round(crop.width)}×${Math.round(crop.height)})</span>
+            </div>
+            <div class="crop-item-actions">
+                <button class="icon-btn download" title="Download Crop" aria-label="Download Crop" onclick="downloadCrop(${index})"><i class="fa-solid fa-download"></i></button>
+                <button class="icon-btn delete" title="Delete Crop" aria-label="Delete Crop" onclick="deleteCrop(${index})"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `;
+
+        li.addEventListener('mouseenter', (e) => showCropPreview(index, e));
+        li.addEventListener('mousemove', (e) => positionCropPreview(e));
+        li.addEventListener('mouseleave', hideCropPreview);
+
+        cropList.appendChild(li);
+    });
+}
+
+function showCropPreview(index, e) {
+    const crop = cropData[currentImage][index];
+    const img = images[currentImage];
+
+    tooltipCanvas.width = crop.width;
+    tooltipCanvas.height = crop.height;
+    tooltipCtx.clearRect(0, 0, crop.width, crop.height);
+    tooltipCtx.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+
+    cropTooltip.style.display = 'block';
+    positionCropPreview(e);
+}
+
+function positionCropPreview(e) {
+    cropTooltip.style.left = `${e.clientX + 16}px`;
+    cropTooltip.style.top = `${e.clientY - 20}px`;
+}
+
+function hideCropPreview() {
+    cropTooltip.style.display = 'none';
+}
+
+window.deleteCrop = function(index) {
+    hideCropPreview();
+    if (cropData[currentImage]) {
+        cropData[currentImage].splice(index, 1);
+        renderCrops();
+    }
+};
+
+window.downloadCrop = function(index) {
+    const crop = cropData[currentImage][index];
+    const img = images[currentImage];
+    const c = document.createElement('canvas');
+    c.width = crop.width;
+    c.height = crop.height;
+    const ct = c.getContext('2d');
+    ct.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+    const ext = currentImage.endsWith('.png') ? 'png' : 'jpg';
+    c.toBlob(blob => saveAs(blob, `${currentImage.split('.')[0]}_crop${index + 1}.${ext}`));
+};
+
+document.getElementById('clearLastCrop').addEventListener('click', () => {
+    hideCropPreview();
+    if (cropData[currentImage] && cropData[currentImage].length > 0) {
+        cropData[currentImage].pop();
+        renderCrops();
+    }
+});
+
+document.getElementById('exportCrops').addEventListener('click', () => {
+    const regions = cropData[currentImage] || [];
+    if (!currentImage || regions.length === 0) return;
+    const zip = new JSZip();
+    const img = images[currentImage];
+    
+    regions.forEach((crop, index) => {
+        const c = document.createElement('canvas');
+        c.width = crop.width;
+        c.height = crop.height;
+        const ct = c.getContext('2d');
+        ct.drawImage(img, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+        const ext = currentImage.endsWith('.png') ? 'png' : 'jpg';
+        const base64 = c.toDataURL('image/' + ext).split(',')[1];
+        zip.file(`${currentImage.split('.')[0]}_crop${index + 1}.${ext}`, base64, { base64: true });
+    });
+
+    zip.generateAsync({ type: 'blob' }).then(content => {
+        saveAs(content, `${currentImage.split('.')[0]}_crops.zip`);
+    });
+});
+
+imageSelector.addEventListener('change', e => loadImage(e.target.value));
+</script>
+</body>
+</html>
